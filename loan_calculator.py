@@ -15,17 +15,3 @@ st.divider()
 # BUYER & INCOME DETAILS
 # ---------------------------
 st.subheader("👥 Buyer Details")
-
-num_buyers = st.selectbox("Number of Buyers", [1, 2, 3, 4], index=0)
-
-buyers = []
-incomes = []
-
-for i in range(num_buyers):
-    st.markdown(f"**Buyer {i+1} Details**")
-    col1, col2 = st.columns(2)
-    with col1:
-        age = st.number_input(f"Buyer {i+1} Age", min_value=21, max_value=75, value=35 if i > 0 else 40, key=f"age_{i}")
-    with col2:
-        income = st.number_input(f"Buyer {i+1} Monthly Income (SGD)", min_value=0.0, value=5000.0 if i > 0 else 8000.0, step=500.0, key=f"income_{i}")
-    buyers.append(age
