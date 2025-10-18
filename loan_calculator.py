@@ -24,9 +24,9 @@ def format_number(num):
     except:
         return f"{num:,.0f}"
 
-def int_input(label, default="", step=1, min_val=0, max_val=None, key=None, help=None):
-    """Integer input box with auto-comma formatting."""
-    raw_str = st.text_input(label, value=default, key=key, help=help)
+def int_input(label, default="", step=1, min_val=0, max_val=None, key=None, help=None, placeholder=None):
+    """Integer input box with auto-comma formatting and placeholder text."""
+    raw_str = st.text_input(label, value=default, key=key, help=help, placeholder=placeholder)
     clean = raw_str.replace(",", "").strip()
     if clean == "":
         clean = "0"
@@ -53,7 +53,12 @@ for i in range(num_buyers):
     with c1:
         age = int_input(f"Age of Buyer {i+1}", default="40", key=f"age_{i}")
     with c2:
-        income = int_input(f"Monthly Income (SGD)", default="8000", key=f"inc_{i}")
+        income = int_input(
+            f"Monthly Income (SGD)",
+            default="",
+            key=f"inc_{i}",
+            placeholder="Enter monthly income per buyer"
+        )
     ages.append(age)
     incomes.append(income)
 
@@ -92,8 +97,12 @@ st.subheader("🏡 Property & Loan Details")
 
 ltv_ratio = {0: 0.75, 1: 0.45, 2: 0.35}[num_outstanding]
 
-# No default purchase price (blank)
-price = int_input("Property Purchase Price (SGD)", default="")
+# Added placeholder text below 👇
+price = int_input(
+    "Property Purchase Price (SGD)",
+    default="",
+    placeholder="Enter Property Purchase Price"
+)
 downpayment = st.slider("Downpayment (%)", 5, 75, 25)
 
 loan_amount = price * (1 - downpayment / 100.0)
