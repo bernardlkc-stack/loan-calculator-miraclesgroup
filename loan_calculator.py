@@ -87,7 +87,7 @@ st.divider()
 # ---------------------------
 # EXISTING LOANS
 # ---------------------------
-existing_loans = int_input("Other Monthly Loan Commitments (SGD)", default="0")
+existing_loans = int_input("Other Monthly Loan Commitments (SGD)", default="0", placeholder="Enter total monthly loan obligations")
 num_outstanding = st.selectbox("Outstanding Housing Loans (for LTV limit)", [0, 1, 2], index=0)
 
 # ---------------------------
@@ -111,9 +111,14 @@ if loan_amount > ltv_max:
     loan_amount = ltv_max
     st.warning(f"LTV capped at {int(ltv_ratio*100)}% ⇒ maximum loan ${format_number(ltv_max)}")
 
+# Loan interest rate with placeholder
 interest = st.number_input(
     "Loan Interest Rate (per annum %)",
-    min_value=0.1, value=3.5, step=0.1, format="%.2f"
+    min_value=0.1,
+    value=3.5,
+    step=0.1,
+    format="%.2f",
+    placeholder="Enter loan interest rate (e.g. 3.5)"
 )
 
 # ---------------------------
