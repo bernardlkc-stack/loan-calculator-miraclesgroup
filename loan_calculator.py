@@ -77,20 +77,6 @@ st.info(
     f"(Rule: min(30, 65 − IWAA))"
 )
 
-# ---------------------------
-# FINANCE UP TO AGE 75 (OPTIONAL)
-# ---------------------------
-with st.expander("💰 Optional Scenario: Finance Up to Age 75"):
-    refinance_tenure = min(30.0, 75.0 - float(iw_age))
-    refinance_tenure = round(max(5.0, refinance_tenure), 1)
-    st.write(
-        f"If refinancing is allowed up to age 75, your possible maximum tenure "
-        f"would be **{refinance_tenure:.0f} years** (Rule: min(30, 75 − IWAA))."
-    )
-
-    # Temporary placeholders for calculations later
-    st.caption("The recalculated monthly instalment will appear after you enter property details below.")
-
 st.divider()
 
 # ---------------------------
@@ -149,11 +135,6 @@ monthly = loan_amount * (r * (1 + r) ** n) / ((1 + r) ** n - 1) if r > 0 else lo
 total_interest = monthly * n - loan_amount
 total_payment = loan_amount + total_interest
 
-# Refinance scenario (age 75)
-r2 = interest / 100.0 / 12.0
-n2 = int(refinance_tenure * 12)
-monthly_refi = loan_amount * (r2 * (1 + r2) ** n2) / ((1 + r2) ** n2 - 1) if r2 > 0 else loan_amount / n2
-
 # ---------------------------
 # TDSR
 # ---------------------------
@@ -182,18 +163,6 @@ st.markdown(
 )
 st.caption(f"Tenure used: **{chosen_tenure:.0f} years** (MAS max via IWAA = {iw_age:.1f})")
 
-# ---------------------------
-# FINANCE TO 75 COMPARISON
-# ---------------------------
-st.divider()
-st.subheader("📈 Finance-to-75 Comparison")
-st.metric(
-    "Monthly Instalment (Finance-to-75 Scenario)",
-    f"${format_number(round(monthly_refi))}",
-    help="Projected monthly instalment if refinanced up to age 75 (max 30 years)."
-)
-st.caption(f"Refinance-to-75 Tenure: **{refinance_tenure:.0f} years**")
-
 st.divider()
 
 # ---------------------------
@@ -213,8 +182,7 @@ st.header("📊 Notes")
 st.markdown("""
 - **IWAA (Income-Weighted Average Age):** (Σ Age×Income / Σ Income)  
 - **MAS Tenure Cap:** **min(30 years, 65 − IWAA)**  
-- **Finance-to-75 Cap:** **min(30 years, 75 − IWAA)** (for refinance scenarios)  
-- **LTV limits:** 75%, 45%, 35% depending on number of outstanding loans  
+- **LTV limits:** 75%, 45%, 35% depending on number of outstanding home loans  
 - **TDSR cap:** monthly debt ≤ 55% of gross income  
 - Buyers can always choose a shorter tenure for faster repayment  
 - Figures are illustrative — confirm with your banker
