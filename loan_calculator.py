@@ -1,40 +1,31 @@
+import streamlit as st
+import math
+
 # ---------------------------
-# PROPERTY & LOAN DETAILS
+# APP CONFIGURATION
 # ---------------------------
-st.subheader("🏡 Property & Loan Details")
+st.set_page_config(page_title="Resale Private Property Loan Calculator | MiraclesGroup", layout="centered")
 
-loan_mode = st.radio("How would you like to calculate your loan?", ["By Property Price", "By Loan Amount"], index=0)
+st.title("🏠 Resale Private Property Loan Calculator (Singapore)")
+st.caption("Built by MiraclesGroup | Powered by Streamlit")
 
-if loan_mode == "By Property Price":
-    purchase_price = st.number_input("Property Purchase Price (SGD)", min_value=100000.0, value=1500000.0, step=10000.0)
-    downpayment_percent = st.slider("Downpayment (%)", min_value=5, max_value=75, value=25)
-    chosen_loan_amount = purchase_price * (1 - downpayment_percent / 100)
-else:
-    chosen_loan_amount = st.number_input("I want to borrow (SGD)", min_value=50000.0, value=1000000.0, step=50000.0)
-    purchase_price = None
-    downpayment_percent = None
+st.divider()
 
-interest_rate = st.number_input("Loan Interest Rate (per annum %)", min_value=0.1, value=3.5, step=0.1)
+# ---------------------------
+# BUYER & INCOME DETAILS
+# ---------------------------
+st.subheader("👥 Buyer Details")
 
-# ----- dynamic max tenure based on loan amount & MAS rule -----
-# basic MAS limit based on youngest buyer
-mas_limit = max(75 - youngest_age, 5)    # ensures at least 5 years
+num_buyers = st.selectbox("Number of Buyers", [1, 2, 3, 4], index=0)
 
-# optional soft logic – smaller loans may deserve shorter tenures
-if chosen_loan_amount <= 500000:
-    practical_limit = 20
-elif chosen_loan_amount <= 1000000:
-    practical_limit = 25
-else:
-    practical_limit = 30
+buyers = []
+incomes = []
 
-max_tenure_limit = min(mas_limit, practical_limit)
-
-loan_tenure = st.slider(
-    "Loan Tenure (Years)",
-    min_value=5,
-    max_value=int(max_tenure_limit),
-    value=min(25, int(max_tenure_limit))
-)
-
-st.caption(f"🔹 Maximum tenure allowed: {int(max_tenure_limit)} years (based on youngest buyer & loan size)")
+for i in range(num_buyers):
+    st.markdown(f"**Buyer {i+1} Details**")
+    col1, col2 = st.columns(2)
+    with col1:
+        age = st.number_input(f"Buyer {i+1} Age", min_value=21, max_value=75, value=35 if i > 0 else 40, key=f"age_{i}")
+    with col2:
+        income = st.number_input(f"Buyer {i+1} Monthly Income (SGD)", min_value=0.0, value=5000.0 if i > 0 else 8000.0, step=500.0, key=f"income_{i}")
+    buyers.append(age
