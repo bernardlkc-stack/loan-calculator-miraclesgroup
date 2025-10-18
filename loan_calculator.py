@@ -33,13 +33,28 @@ for i in range(num_buyers):
     incomes.append(income)
 
 total_income = sum(incomes)
-iw_age = sum(a * i for a, i in zip(ages, incomes)) / total_income if total_income > 0 else min(ages)
+
+# Compute IWAA (Income Weighted Average Age)
+if total_income > 0:
+    iw_age = sum(a * i for a, i in zip(ages, incomes)) / total_income
+else:
+    iw_age = min(ages)
+
+# Max tenure capped by MAS
 max_tenure = max(5, min(30, 75 - iw_age))
+eligible_tenure = round(max_tenure, 1)
+
+# Display IWAA & MAS cap
+st.info(
+    f"💡 **Income-Weighted Average Age (IWAA)** = {iw_age:.1f} years  \n"
+    f"🏦 Based on IWAA, MAS allows a maximum loan tenure of **{eligible_tenure:.1f} years** "
+    f"(Rule: min(30, 75 − IWAA))."
+)
+
+st.divider()
 
 existing_loans = st.number_input("Other Monthly Loan Commitments (SGD, optional)", min_value=0.0, value=0.0, step=100.0)
 num_outstanding = st.selectbox("Outstanding Housing Loans (for LTV limit)", [0, 1, 2], index=0)
-
-st.divider()
 
 # ---------------------------
 # PROPERTY & LOAN DETAILS
@@ -48,7 +63,7 @@ st.subheader("🏡 Property & Loan Details")
 
 calc_mode = st.radio("How would you like to calculate?", ["By Property Price", "By Loan Amount (IWAA)"], index=0)
 
-# LTV ratio
+# Determine LTV ratio
 ltv_ratio = {0: 0.75, 1: 0.45, 2: 0.35}[num_outstanding]
 
 if calc_mode == "By Property Price":
@@ -59,7 +74,6 @@ if calc_mode == "By Property Price":
     if loan_amount > max_loan:
         loan_amount = max_loan
         st.warning(f"LTV capped at {int(ltv_ratio*100)}% ⇒ max loan ${max_loan:,.0f}")
-
 else:
     loan_amount = st.number_input("I want to borrow (SGD)", min_value=50000.0, value=1000000.0, step=50000.0)
     price_check = st.number_input("Property Price (optional, for LTV check)", min_value=0.0, value=0.0, step=10000.0)
@@ -68,8 +82,19 @@ else:
 
 interest = st.number_input("Loan Interest Rate (per annum %)", min_value=0.1, value=3.5, step=0.1)
 
-# Automatic IWAA tenure display
-st.info(f"💡 IWAA = **{iw_age:.1f} years**  →  Max tenure = **{max_tenure:.1f} years** (MAS cap: min(30, 75 − IWAA))")
+# ---------------------------
+# USER-ADJUSTABLE TENURE SLIDER
+# ---------------------------
+chosen_tenure = st.slider(
+    "Loan Tenure (Years)",
+    min_value=5.0,
+    max_value=float(eligible_tenure),
+    value=float(eligible_tenure),
+    step=0.5,
+    help="You can choose to shorten your tenure below the MAS maximum if desired."
+)
+
+st.success(f"🕒 Tenure selected for calculation: **{chosen_tenure:.1f} years** (MAS max: {eligible_tenure:.1f})")
 
 st.divider()
 
@@ -77,14 +102,17 @@ st.divider()
 # CALCULATE REPAYMENT
 # ---------------------------
 r = interest / 100 / 12
-n = int(max_tenure * 12)
+n = int(chosen_tenure * 12)
 monthly = loan_amount * (r * (1 + r) ** n) / ((1 + r) ** n - 1) if r > 0 else loan_amount / n
 total_interest = monthly * n - loan_amount
 total_payment = loan_amount + total_interest
 
-# TDSR
+# ---------------------------
+# TDSR COMPUTATION
+# ---------------------------
 tdsr_cap = 0.55 * total_income
-tdsr_ok = monthly + existing_loans <= tdsr_cap
+total_commitment = monthly + existing_loans
+tdsr_ok = total_commitment <= tdsr_cap
 tdsr_status = "✅ Within TDSR" if tdsr_ok else "❌ Exceeds TDSR"
 tdsr_color = "green" if tdsr_ok else "red"
 
@@ -102,20 +130,29 @@ with c2:
     st.metric("Total Payment", f"${total_payment:,.0f}")
 
 st.markdown(f"**TDSR Status:** <span style='color:{tdsr_color}'>{tdsr_status}</span>", unsafe_allow_html=True)
-st.caption(f"Tenure used: **{max_tenure:.1f} years** (based on IWAA = {iw_age:.1f})")
+st.caption(f"Tenure used: **{chosen_tenure:.1f} years** (MAS max based on IWAA = {iw_age:.1f})")
 
 st.divider()
+
+# ---------------------------
+# BUYER SUMMARY
+# ---------------------------
 st.subheader("👨‍👩‍👧‍👦 Buyer Summary")
 for i in range(num_buyers):
     st.markdown(f"- Buyer {i+1}: Age {ages[i]}, Income ${incomes[i]:,.0f}")
-st.markdown(f"**Total Income:** ${total_income:,.0f}")
+st.markdown(f"**Total Household Income:** ${total_income:,.0f}")
 
 st.divider()
+
+# ---------------------------
+# NOTES
+# ---------------------------
 st.header("📊 Notes")
 st.markdown("""
 - **IWAA (Income-Weighted Average Age):** (Σ Age×Income / Σ Income)  
 - **Tenure cap:** min(30 years, 75 − IWAA).  
-- **LTV limits:** 75%, 45%, 35% (depending on outstanding loans).  
+- **LTV limits:** 75%, 45%, 35% depending on outstanding loans.  
 - **TDSR cap:** monthly debt ≤ 55% of gross income.  
-- Illustrative purposes only — confirm with banker.
+- You can shorten tenure for faster repayment if desired.  
+- For illustration only — confirm figures with your banker.
 """)
