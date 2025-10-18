@@ -65,7 +65,9 @@ if total_income > 0:
 else:
     iw_age = min(ages)
 
-# MAS max tenure rule (min(30, 65 − IWAA))
+# ---------------------------
+# MAS MAX TENURE (65 - IWAA)
+# ---------------------------
 mas_max_tenure = min(30.0, 65.0 - float(iw_age))
 mas_max_tenure = round(max(5.0, mas_max_tenure), 1)
 
@@ -75,8 +77,25 @@ st.info(
     f"(Rule: min(30, 65 − IWAA))"
 )
 
+# ---------------------------
+# FINANCE UP TO AGE 75 (OPTIONAL)
+# ---------------------------
+with st.expander("💰 Optional Scenario: Finance Up to Age 75"):
+    refinance_tenure = min(30.0, 75.0 - float(iw_age))
+    refinance_tenure = round(max(5.0, refinance_tenure), 1)
+    st.write(
+        f"If refinancing is allowed up to age 75, your possible maximum tenure "
+        f"would be **{refinance_tenure:.0f} years** (Rule: min(30, 75 − IWAA))."
+    )
+
+    # Temporary placeholders for calculations later
+    st.caption("The recalculated monthly instalment will appear after you enter property details below.")
+
 st.divider()
 
+# ---------------------------
+# EXISTING LOANS
+# ---------------------------
 existing_loans = int_input("Other Monthly Loan Commitments (SGD)", default="0")
 num_outstanding = st.selectbox("Outstanding Housing Loans (for LTV limit)", [0, 1, 2], index=0)
 
@@ -87,7 +106,7 @@ st.subheader("🏡 Property & Loan Details")
 
 ltv_ratio = {0: 0.75, 1: 0.45, 2: 0.35}[num_outstanding]
 
-# No default price — blank field
+# No default purchase price (blank)
 price = int_input("Property Purchase Price (SGD)", default="")
 downpayment = st.slider("Downpayment (%)", 5, 75, 25)
 
@@ -103,7 +122,7 @@ interest = st.number_input(
 )
 
 # ---------------------------
-# TENURE SLIDER
+# TENURE SLIDER (IWAA RULE)
 # ---------------------------
 chosen_tenure = st.slider(
     "Select Loan Tenure (Years)",
@@ -111,7 +130,7 @@ chosen_tenure = st.slider(
     max_value=float(mas_max_tenure),
     value=float(mas_max_tenure),
     step=0.5,
-    help="Maximum tenure capped by the IWAA rule. You may choose a shorter tenure."
+    help="Maximum tenure is capped by the IWAA rule. You may choose a shorter tenure."
 )
 
 st.success(
@@ -122,13 +141,18 @@ st.success(
 st.divider()
 
 # ---------------------------
-# REPAYMENT CALCULATION
+# REPAYMENT CALCULATIONS
 # ---------------------------
 r = interest / 100.0 / 12.0
 n = int(chosen_tenure * 12)
 monthly = loan_amount * (r * (1 + r) ** n) / ((1 + r) ** n - 1) if r > 0 else loan_amount / n
 total_interest = monthly * n - loan_amount
 total_payment = loan_amount + total_interest
+
+# Refinance scenario (age 75)
+r2 = interest / 100.0 / 12.0
+n2 = int(refinance_tenure * 12)
+monthly_refi = loan_amount * (r2 * (1 + r2) ** n2) / ((1 + r2) ** n2 - 1) if r2 > 0 else loan_amount / n2
 
 # ---------------------------
 # TDSR
@@ -158,6 +182,18 @@ st.markdown(
 )
 st.caption(f"Tenure used: **{chosen_tenure:.0f} years** (MAS max via IWAA = {iw_age:.1f})")
 
+# ---------------------------
+# FINANCE TO 75 COMPARISON
+# ---------------------------
+st.divider()
+st.subheader("📈 Finance-to-75 Comparison")
+st.metric(
+    "Monthly Instalment (Finance-to-75 Scenario)",
+    f"${format_number(round(monthly_refi))}",
+    help="Projected monthly instalment if refinanced up to age 75 (max 30 years)."
+)
+st.caption(f"Refinance-to-75 Tenure: **{refinance_tenure:.0f} years**")
+
 st.divider()
 
 # ---------------------------
@@ -177,8 +213,9 @@ st.header("📊 Notes")
 st.markdown("""
 - **IWAA (Income-Weighted Average Age):** (Σ Age×Income / Σ Income)  
 - **MAS Tenure Cap:** **min(30 years, 65 − IWAA)**  
-- **LTV limits:** 75%, 45%, 35% depending on number of outstanding home loans  
+- **Finance-to-75 Cap:** **min(30 years, 75 − IWAA)** (for refinance scenarios)  
+- **LTV limits:** 75%, 45%, 35% depending on number of outstanding loans  
 - **TDSR cap:** monthly debt ≤ 55% of gross income  
-- Buyers can always choose a shorter tenure than the MAS maximum  
+- Buyers can always choose a shorter tenure for faster repayment  
 - Figures are illustrative — confirm with your banker
 """)
