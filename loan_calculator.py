@@ -87,7 +87,11 @@ st.divider()
 # ---------------------------
 # EXISTING LOANS
 # ---------------------------
-existing_loans = int_input("Other Monthly Loan Commitments (SGD)", default="0", placeholder="Enter total monthly loan obligations")
+existing_loans = int_input(
+    "Other Monthly Loan Commitments (SGD)",
+    default="0",
+    placeholder="Enter total monthly loan obligations"
+)
 num_outstanding = st.selectbox("Outstanding Housing Loans (for LTV limit)", [0, 1, 2], index=0)
 
 # ---------------------------
@@ -97,7 +101,7 @@ st.subheader("🏡 Property & Loan Details")
 
 ltv_ratio = {0: 0.75, 1: 0.45, 2: 0.35}[num_outstanding]
 
-# Added placeholder text below 👇
+# Purchase Price with placeholder
 price = int_input(
     "Property Purchase Price (SGD)",
     default="",
@@ -111,15 +115,16 @@ if loan_amount > ltv_max:
     loan_amount = ltv_max
     st.warning(f"LTV capped at {int(ltv_ratio*100)}% ⇒ maximum loan ${format_number(ltv_max)}")
 
-# Loan interest rate with placeholder
-interest = st.number_input(
+# Loan interest rate with placeholder (text input instead of number_input)
+interest_str = st.text_input(
     "Loan Interest Rate (per annum %)",
-    min_value=0.1,
-    value=3.5,
-    step=0.1,
-    format="%.2f",
+    value="",
     placeholder="Enter loan interest rate (e.g. 3.5)"
 )
+try:
+    interest = float(interest_str)
+except ValueError:
+    interest = 0.0
 
 # ---------------------------
 # TENURE SLIDER (IWAA RULE)
@@ -143,9 +148,12 @@ st.divider()
 # ---------------------------
 # REPAYMENT CALCULATIONS
 # ---------------------------
-r = interest / 100.0 / 12.0
+r = interest / 100.0 / 12.0 if interest > 0 else 0
 n = int(chosen_tenure * 12)
-monthly = loan_amount * (r * (1 + r) ** n) / ((1 + r) ** n - 1) if r > 0 else loan_amount / n
+if r > 0:
+    monthly = loan_amount * (r * (1 + r) ** n) / ((1 + r) ** n - 1)
+else:
+    monthly = loan_amount / n if n > 0 else 0
 total_interest = monthly * n - loan_amount
 total_payment = loan_amount + total_interest
 
