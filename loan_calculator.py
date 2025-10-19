@@ -25,8 +25,11 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# ---------------------------
+# HEADER
+# ---------------------------
 st.title("🏠 Resale Private Property Loan Calculator")
-st.caption("MiraclesGroup | Compact Edition")
+st.caption("Created by Bernard Lau | MiraclesGroup")
 st.divider()
 
 # ---------------------------
@@ -104,7 +107,7 @@ with col2:
         key="outstanding_loans"
     )
 
-num_outstanding_int = int(num_outstanding[0])  # extract first character as number
+num_outstanding_int = int(num_outstanding[0])  # extract first digit
 ltv_ratio = {0: 0.75, 1: 0.45, 2: 0.35}[num_outstanding_int]
 
 # ---------------------------
@@ -148,7 +151,7 @@ max_property_price = max_loan_tdsr / ltv_ratio if ltv_ratio > 0 else 0
 # ---------------------------
 # RESULTS
 # ---------------------------
-st.subheader("💡 Loan Summary (Compact View)")
+st.subheader("💡 Loan Summary")
 
 # Row 1: Actual Plan
 c1, c2, c3 = st.columns(3)
@@ -180,7 +183,7 @@ st.divider()
 # ASSET SIMULATION
 # ---------------------------
 if shortfall > 0:
-    st.markdown("#### 💎 Asset Simulation")
+    st.markdown("#### 💎 Asset Simulation — Estimated Amount Required")
     extra_monthly_needed = pmt(r, n, shortfall)
     recognized_income_needed = extra_monthly_needed / 0.55
     asset_needed_pledge = recognized_income_needed * 48
