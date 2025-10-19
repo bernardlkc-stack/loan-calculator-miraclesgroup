@@ -183,20 +183,42 @@ else:
 shortfall = loan_amount - max_loan_tdsr if loan_amount > max_loan_tdsr else 0.0
 
 # ---------------------------
-# RESULTS
+# RESULTS (2-ROW LAYOUT)
 # ---------------------------
 st.header("💡 Loan Summary")
 
-c1, c2 = st.columns(2)
-with c1:
-    st.metric("Loan Amount", f"${format_number(loan_amount)}")
-    st.metric("Monthly Instalment", f"${format_number(round(monthly))}")
-    st.metric("TDSR Limit (55%)", f"${format_number(round(tdsr_cap))}")
-with c2:
-    st.metric("Max Loan (Based on TDSR)", f"${format_number(round(max_loan_tdsr))}")
-    st.metric("Total Interest Payable", f"${format_number(round(total_interest))}")
-    st.metric("Total Payment", f"${format_number(round(total_payment))}")
+# Calculate max property price based on TDSR
+if ltv_ratio > 0:
+    max_property_price = max_loan_tdsr / ltv_ratio
+else:
+    max_property_price = 0
 
+# FIRST ROW — ACTUAL PURCHASE
+st.markdown("### 🏡 Actual Purchase Plan")
+c1, c2, c3 = st.columns(3)
+with c1:
+    st.metric("Property Price", f"${format_number(price)}")
+with c2:
+    st.metric("Loan Required", f"${format_number(loan_amount)}")
+with c3:
+    st.metric("Monthly Instalment", f"${format_number(round(monthly))}")
+
+st.divider()
+
+# SECOND ROW — MAX AFFORDABLE PLAN
+st.markdown("### 💰 Max Affordable Plan (Based on TDSR)")
+c4, c5, c6 = st.columns(3)
+with c4:
+    st.metric("Max Property Price", f"${format_number(round(max_property_price))}")
+with c5:
+    st.metric("Max Loan Eligible", f"${format_number(round(max_loan_tdsr))}")
+with c6:
+    max_monthly = pmt(r, n, max_loan_tdsr) if r > 0 else (max_loan_tdsr / n if n > 0 else 0)
+    st.metric("Monthly Instalment (Max)", f"${format_number(round(max_monthly))}")
+
+st.divider()
+
+# STATUS SECTION
 if shortfall > 0:
     st.error(
         f"⚠️ Loan exceeds TDSR limit.\n\n"
@@ -210,7 +232,10 @@ st.markdown(
     f"**TDSR Status:** <span style='color:{tdsr_color}'>{tdsr_status}</span>",
     unsafe_allow_html=True
 )
-st.caption(f"Tenure used: **{chosen_tenure:.0f} years** (MAS max via IWAA = {iw_age:.1f})")
+st.caption(
+    f"Tenure used: **{chosen_tenure:.0f} years** "
+    f"(MAS max via IWAA = {iw_age:.1f})"
+)
 
 # ---------------------------
 # ASSET SIMULATION — TIDIER LAYOUT
