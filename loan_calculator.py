@@ -18,14 +18,12 @@ st.divider()
 # HELPERS
 # ---------------------------
 def format_number(num):
-    """Format integer with commas."""
     try:
         return format_decimal(num, locale='en_SG')
     except:
         return f"{num:,.0f}"
 
 def int_input(label, default="", step=1, min_val=0, max_val=None, key=None, help=None, placeholder=None):
-    """Integer input box with auto-comma formatting and placeholder text."""
     raw_str = st.text_input(label, value=default, key=key, help=help, placeholder=placeholder)
     clean = raw_str.replace(",", "").strip()
     if clean == "":
@@ -38,6 +36,13 @@ def int_input(label, default="", step=1, min_val=0, max_val=None, key=None, help
     if max_val is not None:
         value = min(max_val, value)
     return value
+
+def pmt(rate, nper, pv):
+    if nper <= 0:
+        return 0.0
+    if rate <= 0:
+        return pv / nper
+    return pv * (rate * (1 + rate) ** nper) / ((1 + rate) ** nper - 1)
 
 # ---------------------------
 # BUYER DETAILS
@@ -64,15 +69,12 @@ for i in range(num_buyers):
 
 total_income = sum(incomes)
 
-# Compute IWAA (Income Weighted Average Age)
+# IWAA
 if total_income > 0:
     iw_age = sum(a * i for a, i in zip(ages, incomes)) / total_income
 else:
     iw_age = min(ages)
 
-# ---------------------------
-# MAS MAX TENURE (65 - IWAA)
-# ---------------------------
 mas_max_tenure = min(30.0, 65.0 - float(iw_age))
 mas_max_tenure = round(max(5.0, mas_max_tenure), 1)
 
@@ -95,7 +97,6 @@ existing_loans = int_input(
 )
 num_outstanding = st.selectbox("Outstanding Housing Loans (for LTV limit)", [0, 1, 2], index=0)
 
-# Adjust LTV automatically
 ltv_ratio = {0: 0.75, 1: 0.45, 2: 0.35}[num_outstanding]
 
 # ---------------------------
@@ -116,7 +117,6 @@ if loan_amount > ltv_max:
     loan_amount = ltv_max
     st.warning(f"LTV capped at {int(ltv_ratio*100)}% ⇒ maximum loan ${format_number(ltv_max)}")
 
-# Loan interest rate input
 interest_str = st.text_input(
     "Loan Interest Rate (per annum %)",
     value="",
@@ -128,15 +128,14 @@ except ValueError:
     interest = 0.0
 
 # ---------------------------
-# TENURE SLIDER (IWAA RULE)
+# TENURE SLIDER
 # ---------------------------
 chosen_tenure = st.slider(
     "Select Loan Tenure (Years)",
     min_value=5.0,
     max_value=float(mas_max_tenure),
     value=float(mas_max_tenure),
-    step=0.5,
-    help="Maximum tenure is capped by the IWAA rule. You may choose a shorter tenure."
+    step=0.5
 )
 
 st.success(
@@ -149,17 +148,19 @@ st.divider()
 # ---------------------------
 # REPAYMENT CALCULATIONS
 # ---------------------------
-r = interest / 100.0 / 12.0 if interest > 0 else 0
+r = interest / 100.0 / 12.0 if interest > 0 else 0.0
 n = int(chosen_tenure * 12)
+
 if r > 0:
-    monthly = loan_amount * (r * (1 + r) ** n) / ((1 + r) ** n - 1)
+    monthly = pmt(r, n, loan_amount)
 else:
-    monthly = loan_amount / n if n > 0 else 0
+    monthly = loan_amount / n if n > 0 else 0.0
+
 total_interest = monthly * n - loan_amount
 total_payment = loan_amount + total_interest
 
 # ---------------------------
-# TDSR + MAX LOAN LOGIC
+# TDSR + MAX LOAN
 # ---------------------------
 tdsr_cap = 0.55 * total_income
 total_commitment = monthly + existing_loans
@@ -167,14 +168,12 @@ tdsr_ok = total_commitment <= tdsr_cap
 tdsr_status = "✅ Within TDSR" if tdsr_ok else "❌ Exceeds TDSR"
 tdsr_color = "green" if tdsr_ok else "red"
 
-# Compute max loan based on TDSR limit
 if r > 0:
     max_loan_tdsr = (tdsr_cap - existing_loans) * ((1 + r) ** n - 1) / (r * (1 + r) ** n)
 else:
     max_loan_tdsr = (tdsr_cap - existing_loans) * n
 
-# Shortfall (if any)
-shortfall = loan_amount - max_loan_tdsr if loan_amount > max_loan_tdsr else 0
+shortfall = loan_amount - max_loan_tdsr if loan_amount > max_loan_tdsr else 0.0
 
 # ---------------------------
 # RESULTS
@@ -204,23 +203,25 @@ st.markdown(
     f"**TDSR Status:** <span style='color:{tdsr_color}'>{tdsr_status}</span>",
     unsafe_allow_html=True
 )
-st.caption(f"Tenure used: **{chosen_tenure:.0f} years** (MAS max via IWAA = {iw_age:.1f})")
 
 # ---------------------------
-# ASSET SIMULATION
+# ASSET SIMULATION (CLEAN)
 # ---------------------------
-if shortfall > 0:
+if shortfall > 0 and n > 0:
+    extra_monthly_needed = pmt(r, n, shortfall) if r > 0 else (shortfall / n)
+    recognized_income_needed = extra_monthly_needed / 0.55 if extra_monthly_needed > 0 else 0.0
+
+    asset_needed_pledge = recognized_income_needed * 48
+    asset_needed_unpledge = recognized_income_needed * 48 / 0.30
+
     st.divider()
-    st.subheader("💎 Asset Simulation — How Much You’d Need")
+    st.subheader("💎 Asset Requirement to Qualify")
 
-    asset_needed_pledge = shortfall * 48
-    asset_needed_unpledge = shortfall * 48 / 0.3
-
-    st.info(
-        f"To cover your shortfall of ${format_number(round(shortfall))} via assets:\n\n"
-        f"🔹 **If Pledged (60% recognition):** Need approx. **${format_number(round(asset_needed_pledge))}** in fixed deposit locked for 48 months.\n"
-        f"🔸 **If Unpledged (30% recognition):** Need approx. **${format_number(round(asset_needed_unpledge))}** in liquid assets (e.g. cash, shares)."
-    )
+    c3, c4 = st.columns(2)
+    with c3:
+        st.metric("If Pledged (Asset locked 48 months)", f"${format_number(round(asset_needed_pledge))}")
+    with c4:
+        st.metric("If Unpledged (30% recognized)", f"${format_number(round(asset_needed_unpledge))}")
 
 st.divider()
 
@@ -229,11 +230,10 @@ st.divider()
 # ---------------------------
 st.header("📊 Notes")
 st.markdown("""
-- **Pledging:** Monthly income contribution = Asset Value ÷ 48  
-- **Unpledging:** Monthly income contribution = (Asset Value × 0.3) ÷ 48  
+- **Pledging:** Monthly recognized income = Asset ÷ 48  
+- **Unpledging:** Monthly recognized income = (Asset × 0.3) ÷ 48  
+- **TDSR Limit:** 55% of total income  
 - **MAS Tenure Cap:** min(30 years, 65 − IWAA)  
-- **TDSR limit:** 55% of gross monthly income  
-- **LTV limits:** depend on outstanding loans (75%, 45%, 35%)  
-- **Shortfall:** amount exceeding TDSR-based maximum must be covered by cash/CPF or additional recognized assets  
-- Figures are estimates — confirm with your banker for exact eligibility
+- **LTV:** 75%, 45%, 35% depending on outstanding loans  
+- **Shortfall:** amount exceeding TDSR-based maximum must be covered by cash/CPF or additional assets  
 """)
