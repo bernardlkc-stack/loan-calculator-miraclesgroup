@@ -137,26 +137,6 @@ except ValueError:
     interest = 0.0
 
 # ---------------------------
-# ASSET PLEDGE / UNPLEDGE INPUT
-# ---------------------------
-st.subheader("💎 Pledged / Unpledged Assets (Optional)")
-asset_value = int_input("Asset Value (SGD)", default="", placeholder="Enter value of liquid asset or fixed deposit")
-asset_type = st.selectbox("Asset Type", ["None", "Pledged Asset", "Unpledged Asset"], index=0)
-
-if asset_type == "Pledged Asset" and asset_value > 0:
-    additional_income = asset_value / 48
-    note = f"Pledged ${format_number(asset_value)} adds ${format_number(round(additional_income))}/month to income."
-elif asset_type == "Unpledged Asset" and asset_value > 0:
-    recognized_asset = asset_value * 0.3
-    additional_income = recognized_asset / 48
-    note = f"Unpledged ${format_number(asset_value)} counts as ${format_number(round(recognized_asset))} (30%) and adds ${format_number(round(additional_income))}/month."
-else:
-    additional_income = 0
-    note = "No pledged or unpledged assets used."
-
-st.caption(note)
-
-# ---------------------------
 # TENURE SLIDER (IWAA RULE)
 # ---------------------------
 chosen_tenure = st.slider(
@@ -188,10 +168,9 @@ total_interest = monthly * n - loan_amount
 total_payment = loan_amount + total_interest
 
 # ---------------------------
-# TDSR + MAX LOAN LOGIC (WITH ASSET-INCOME)
+# TDSR + MAX LOAN LOGIC
 # ---------------------------
-total_income_with_assets = total_income + additional_income
-tdsr_cap = 0.55 * total_income_with_assets
+tdsr_cap = 0.55 * total_income
 total_commitment = monthly + existing_loans
 tdsr_ok = total_commitment <= tdsr_cap
 tdsr_status = "✅ Within TDSR" if tdsr_ok else "❌ Exceeds TDSR"
@@ -216,8 +195,6 @@ with c1:
     st.metric("Loan Amount", f"${format_number(loan_amount)}")
     st.metric("Monthly Instalment", f"${format_number(round(monthly))}")
     st.metric("TDSR Limit (55%)", f"${format_number(round(tdsr_cap))}")
-    if additional_income > 0:
-        st.metric("Added Monthly Income (from Assets)", f"${format_number(round(additional_income))}")
 with c2:
     st.metric("Max Loan (Based on TDSR)", f"${format_number(round(max_loan_tdsr))}")
     st.metric("Total Interest Payable", f"${format_number(round(total_interest))}")
@@ -238,17 +215,21 @@ st.markdown(
 )
 st.caption(f"Tenure used: **{chosen_tenure:.0f} years** (MAS max via IWAA = {iw_age:.1f})")
 
-st.divider()
+# ---------------------------
+# ASSET SIMULATION
+# ---------------------------
+if shortfall > 0:
+    st.divider()
+    st.subheader("💎 Asset Simulation — How Much You’d Need")
 
-# ---------------------------
-# BUYER SUMMARY
-# ---------------------------
-st.subheader("👨‍👩‍👧‍👦 Buyer Summary")
-for i in range(num_buyers):
-    st.markdown(f"- Buyer {i+1}: Age {ages[i]}, Income ${format_number(incomes[i])}")
-st.markdown(f"**Total Household Income:** ${format_number(total_income)}")
-st.markdown(f"**Additional Monthly Income (Assets):** ${format_number(round(additional_income))}")
-st.markdown(f"**CPF Option Chosen:** {pledge_option}")
+    asset_needed_pledge = shortfall * 48
+    asset_needed_unpledge = shortfall * 48 / 0.3
+
+    st.info(
+        f"To cover your shortfall of ${format_number(round(shortfall))} via assets:\n\n"
+        f"🔹 **If Pledged:** You’ll need approximately **${format_number(round(asset_needed_pledge))}** in fixed deposit locked for 48 months.\n"
+        f"🔸 **If Unpledged:** You’ll need approximately **${format_number(round(asset_needed_unpledge))}** in liquid assets (30% recognition)."
+    )
 
 st.divider()
 
@@ -257,13 +238,12 @@ st.divider()
 # ---------------------------
 st.header("📊 Notes")
 st.markdown("""
-### 🏦 TDSR and Asset Formulas
-- **TDSR Limit:** 55% × (Total Monthly Income + Recognized Asset Income)
-- **Pledged Assets:** Monthly Income = Asset Value ÷ 48  
-- **Unpledged Assets:** Monthly Income = (Asset Value × 0.3) ÷ 48  
+- **Pledging:** Monthly income contribution = Asset Value ÷ 48  
+- **Unpledging:** Monthly income contribution = (Asset Value × 0.3) ÷ 48  
 - **MAS Tenure Cap:** min(30 years, 65 − IWAA)  
+- **TDSR limit:** 55% of gross monthly income  
 - **LTV limits:** depend on outstanding loans (75%, 45%, 35%)  
 - **CPF Pledge Option:** may raise LTV up to 80% depending on bank policy  
-- **Shortfall:** amount exceeding TDSR-based maximum must be covered by cash/CPF  
+- **Shortfall:** amount exceeding TDSR-based maximum must be covered by cash/CPF or additional recognized assets  
 - Figures are estimates — confirm with your banker for exact eligibility
 """)
