@@ -85,8 +85,9 @@ st.info(
 st.divider()
 
 # ---------------------------
-# EXISTING LOANS
+# EXISTING LOANS & CPF PLEDGE
 # ---------------------------
+st.subheader("💰 Existing Loans & CPF Option")
 existing_loans = int_input(
     "Other Monthly Loan Commitments (SGD)",
     default="0",
@@ -94,14 +95,23 @@ existing_loans = int_input(
 )
 num_outstanding = st.selectbox("Outstanding Housing Loans (for LTV limit)", [0, 1, 2], index=0)
 
+pledge_option = st.selectbox(
+    "CPF Retirement Account Option",
+    ["Unpledge (Standard 55%)", "Pledge (Up to 60%)"],
+    index=0,
+    help="Pledging CPF can improve your LTV slightly depending on bank assessment."
+)
+
+# Adjust LTV based on pledge/unpledge
+ltv_ratio = {0: 0.75, 1: 0.45, 2: 0.35}[num_outstanding]
+if pledge_option == "Pledge (Up to 60%)":
+    ltv_ratio = min(ltv_ratio + 0.05, 0.80)
+
 # ---------------------------
 # PROPERTY & LOAN DETAILS
 # ---------------------------
 st.subheader("🏡 Property & Loan Details")
 
-ltv_ratio = {0: 0.75, 1: 0.45, 2: 0.35}[num_outstanding]
-
-# Purchase Price with placeholder
 price = int_input(
     "Property Purchase Price (SGD)",
     default="",
@@ -115,7 +125,7 @@ if loan_amount > ltv_max:
     loan_amount = ltv_max
     st.warning(f"LTV capped at {int(ltv_ratio*100)}% ⇒ maximum loan ${format_number(ltv_max)}")
 
-# Loan interest rate with placeholder (text input instead of number_input)
+# Loan interest rate input
 interest_str = st.text_input(
     "Loan Interest Rate (per annum %)",
     value="",
@@ -158,13 +168,22 @@ total_interest = monthly * n - loan_amount
 total_payment = loan_amount + total_interest
 
 # ---------------------------
-# TDSR
+# TDSR + MAX LOAN LOGIC
 # ---------------------------
 tdsr_cap = 0.55 * total_income
 total_commitment = monthly + existing_loans
 tdsr_ok = total_commitment <= tdsr_cap
 tdsr_status = "✅ Within TDSR" if tdsr_ok else "❌ Exceeds TDSR"
 tdsr_color = "green" if tdsr_ok else "red"
+
+# Compute max loan based on TDSR limit
+if r > 0:
+    max_loan_tdsr = (tdsr_cap - existing_loans) * ((1 + r) ** n - 1) / (r * (1 + r) ** n)
+else:
+    max_loan_tdsr = (tdsr_cap - existing_loans) * n
+
+# Shortfall (if any)
+shortfall = loan_amount - max_loan_tdsr if loan_amount > max_loan_tdsr else 0
 
 # ---------------------------
 # RESULTS
@@ -175,9 +194,20 @@ c1, c2 = st.columns(2)
 with c1:
     st.metric("Loan Amount", f"${format_number(loan_amount)}")
     st.metric("Monthly Instalment", f"${format_number(round(monthly))}")
+    st.metric("TDSR Limit (55%)", f"${format_number(round(tdsr_cap))}")
 with c2:
+    st.metric("Max Loan (Based on TDSR)", f"${format_number(round(max_loan_tdsr))}")
     st.metric("Total Interest Payable", f"${format_number(round(total_interest))}")
     st.metric("Total Payment", f"${format_number(round(total_payment))}")
+
+if shortfall > 0:
+    st.error(
+        f"⚠️ Loan exceeds TDSR limit.\n\n"
+        f"💸 Shortfall: **${format_number(round(shortfall))}** "
+        f"(to be paid by cash/CPF)."
+    )
+else:
+    st.success("✅ Loan amount is within TDSR and LTV limits.")
 
 st.markdown(
     f"**TDSR Status:** <span style='color:{tdsr_color}'>{tdsr_status}</span>",
@@ -194,6 +224,7 @@ st.subheader("👨‍👩‍👧‍👦 Buyer Summary")
 for i in range(num_buyers):
     st.markdown(f"- Buyer {i+1}: Age {ages[i]}, Income ${format_number(incomes[i])}")
 st.markdown(f"**Total Household Income:** ${format_number(total_income)}")
+st.markdown(f"**CPF Option Chosen:** {pledge_option}")
 
 st.divider()
 
@@ -204,8 +235,9 @@ st.header("📊 Notes")
 st.markdown("""
 - **IWAA (Income-Weighted Average Age):** (Σ Age×Income / Σ Income)  
 - **MAS Tenure Cap:** **min(30 years, 65 − IWAA)**  
-- **LTV limits:** 75%, 45%, 35% depending on number of outstanding home loans  
-- **TDSR cap:** monthly debt ≤ 55% of gross income  
-- Buyers can always choose a shorter tenure for faster repayment  
-- Figures are illustrative — confirm with your banker
+- **TDSR limit:** 55% of gross monthly income  
+- **LTV limits:** depend on outstanding loans (75%, 45%, 35%)  
+- **CPF Pledge Option:** may raise LTV up to 80% depending on bank policy  
+- **Shortfall:** amount exceeding TDSR-based maximum must be covered by cash/CPF  
+- Figures are estimates — confirm with your banker for exact eligibility
 """)
