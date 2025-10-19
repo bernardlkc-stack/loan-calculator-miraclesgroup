@@ -85,9 +85,9 @@ st.info(
 st.divider()
 
 # ---------------------------
-# EXISTING LOANS & CPF OPTION
+# EXISTING LOANS
 # ---------------------------
-st.subheader("💰 Existing Loans & CPF Option")
+st.subheader("💰 Existing Loans")
 existing_loans = int_input(
     "Other Monthly Loan Commitments (SGD)",
     default="0",
@@ -95,17 +95,8 @@ existing_loans = int_input(
 )
 num_outstanding = st.selectbox("Outstanding Housing Loans (for LTV limit)", [0, 1, 2], index=0)
 
-pledge_option = st.selectbox(
-    "CPF Retirement Account Option",
-    ["Unpledge (Standard 55%)", "Pledge (Up to 60%)"],
-    index=0,
-    help="Pledging CPF can improve your LTV slightly depending on bank assessment."
-)
-
-# Adjust LTV based on pledge/unpledge
+# Adjust LTV automatically
 ltv_ratio = {0: 0.75, 1: 0.45, 2: 0.35}[num_outstanding]
-if pledge_option == "Pledge (Up to 60%)":
-    ltv_ratio = min(ltv_ratio + 0.05, 0.80)
 
 # ---------------------------
 # PROPERTY & LOAN DETAILS
@@ -227,8 +218,8 @@ if shortfall > 0:
 
     st.info(
         f"To cover your shortfall of ${format_number(round(shortfall))} via assets:\n\n"
-        f"🔹 **If Pledged:** You’ll need approximately **${format_number(round(asset_needed_pledge))}** in fixed deposit locked for 48 months.\n"
-        f"🔸 **If Unpledged:** You’ll need approximately **${format_number(round(asset_needed_unpledge))}** in liquid assets (30% recognition)."
+        f"🔹 **If Pledged (60% recognition):** Need approx. **${format_number(round(asset_needed_pledge))}** in fixed deposit locked for 48 months.\n"
+        f"🔸 **If Unpledged (30% recognition):** Need approx. **${format_number(round(asset_needed_unpledge))}** in liquid assets (e.g. cash, shares)."
     )
 
 st.divider()
@@ -243,7 +234,6 @@ st.markdown("""
 - **MAS Tenure Cap:** min(30 years, 65 − IWAA)  
 - **TDSR limit:** 55% of gross monthly income  
 - **LTV limits:** depend on outstanding loans (75%, 45%, 35%)  
-- **CPF Pledge Option:** may raise LTV up to 80% depending on bank policy  
 - **Shortfall:** amount exceeding TDSR-based maximum must be covered by cash/CPF or additional recognized assets  
 - Figures are estimates — confirm with your banker for exact eligibility
 """)
