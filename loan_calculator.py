@@ -10,7 +10,9 @@ st.set_page_config(
     layout="centered"
 )
 
-# Compact CSS
+# ---------------------------
+# STYLE – COMPACT CSS
+# ---------------------------
 st.markdown("""
 <style>
     h1, h2, h3, h4, h5, h6 { margin-bottom: 0.2rem !important; }
@@ -82,11 +84,28 @@ st.caption(f"💡 IWAA: {iw_age:.1f} yrs | Max Tenure: {mas_max_tenure:.0f} yrs 
 st.divider()
 
 # ---------------------------
-# EXISTING LOANS
+# EXISTING LOANS (SIDE BY SIDE)
 # ---------------------------
-existing_loans = int_input("Other Monthly Loans (SGD)", "0", placeholder="e.g. 1000")
-num_outstanding = st.selectbox("Outstanding Home Loans", [0, 1, 2], index=0)
-ltv_ratio = {0: 0.75, 1: 0.45, 2: 0.35}[num_outstanding]
+st.subheader("💰 Existing Loan Commitments")
+
+col1, col2 = st.columns(2)
+with col1:
+    existing_loans = int_input(
+        "Other Monthly Loans (SGD)",
+        "0",
+        placeholder="e.g. 1000",
+        key="existing_loans"
+    )
+with col2:
+    num_outstanding = st.selectbox(
+        "Outstanding Home Loans",
+        ["0 - None", "1 - One Property", "2 - Two or More"],
+        index=0,
+        key="outstanding_loans"
+    )
+
+num_outstanding_int = int(num_outstanding[0])  # extract first character as number
+ltv_ratio = {0: 0.75, 1: 0.45, 2: 0.35}[num_outstanding_int]
 
 # ---------------------------
 # PROPERTY & LOAN DETAILS
