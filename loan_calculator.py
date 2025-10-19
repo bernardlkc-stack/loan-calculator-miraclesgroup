@@ -103,7 +103,6 @@ existing_loans = int_input(
 )
 num_outstanding = st.selectbox("Outstanding Housing Loans (for LTV limit)", [0, 1, 2], index=0)
 
-# Adjust LTV automatically
 ltv_ratio = {0: 0.75, 1: 0.45, 2: 0.35}[num_outstanding]
 
 # ---------------------------
@@ -124,7 +123,6 @@ if loan_amount > ltv_max:
     loan_amount = ltv_max
     st.warning(f"LTV capped at {int(ltv_ratio*100)}% ⇒ maximum loan ${format_number(ltv_max)}")
 
-# Loan interest rate input
 interest_str = st.text_input(
     "Loan Interest Rate (per annum %)",
     value="",
@@ -171,19 +169,17 @@ total_payment = loan_amount + total_interest
 # ---------------------------
 # TDSR + MAX LOAN LOGIC
 # ---------------------------
-tdsr_cap = 0.55 * total_income                 # monthly $ allowance for all debts
-total_commitment = monthly + existing_loans    # monthly $ used by this loan + other loans
+tdsr_cap = 0.55 * total_income
+total_commitment = monthly + existing_loans
 tdsr_ok = total_commitment <= tdsr_cap
 tdsr_status = "✅ Within TDSR" if tdsr_ok else "❌ Exceeds TDSR"
 tdsr_color = "green" if tdsr_ok else "red"
 
-# Compute max loan based on TDSR limit
 if r > 0:
     max_loan_tdsr = (tdsr_cap - existing_loans) * ((1 + r) ** n - 1) / (r * (1 + r) ** n)
 else:
     max_loan_tdsr = (tdsr_cap - existing_loans) * n
 
-# Shortfall in principal (if any)
 shortfall = loan_amount - max_loan_tdsr if loan_amount > max_loan_tdsr else 0.0
 
 # ---------------------------
@@ -217,7 +213,7 @@ st.markdown(
 st.caption(f"Tenure used: **{chosen_tenure:.0f} years** (MAS max via IWAA = {iw_age:.1f})")
 
 # ---------------------------
-# ASSET SIMULATION — CLEAN VERSION
+# ASSET SIMULATION — TIDIER LAYOUT
 # ---------------------------
 if shortfall > 0 and n > 0:
     st.divider()
@@ -235,12 +231,14 @@ if shortfall > 0 and n > 0:
     with c2:
         st.metric("If Unpledged (Showfund)", f"${format_number(round(asset_needed_unpledge))}")
 
-    st.caption("""
-**Unpledged (Showfund) — Two Key Timelines:**
-1️⃣ **At loan application:** Proof of funds (bank statement) must be shown to issue the Letter of Offer.  
-2️⃣ **Before loan disbursement:** Funds must be shown again to confirm they’re still available.  
-Unlike pledged funds, showfunds are not locked but must remain accessible.
-""")
+        st.markdown("""
+        <div style='font-size:0.9rem; line-height:1.5; color:#555; margin-top:10px;'>
+        <b>Unpledged (Showfund) — Two Key Timelines:</b><br>
+        1️⃣ <b>At loan application:</b> Proof of funds (bank statement) must be shown to issue the Letter of Offer.<br>
+        2️⃣ <b>Before loan disbursement:</b> Funds must be shown again to confirm they’re still available.<br>
+        <i>Unlike pledged funds, showfunds are not locked but must remain accessible.</i>
+        </div>
+        """, unsafe_allow_html=True)
 
 st.divider()
 
